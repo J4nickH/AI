@@ -22,30 +22,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1. Node.js Umgebung einrichten
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Wähle die von dir verwendete Node-Version
+          node-version: '20' 
           
-      # 2. Abhängigkeiten installieren
       - name: Install dependencies
         run: npm install
         
-      # 3. Projekt bauen (Dieser Schritt erstellt den "dist"-Ordner!)
       - name: Build project
         run: npm run build
         
-      # 4. Setup Pages Umgebung
       - name: Setup Pages
         uses: actions/configure-pages@v5
         
-      # 5. Den fertigen "dist"-Ordner als Artefakt hochladen
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # WICHTIG: Nur den gebauten Ordner hochladen
-          path: './dist' 
+          path: './dist' # NUR den fertigen Code hochladen!
 
   deploy:
     environment:
