@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostelligence - Smart Operations Copilot</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Configuration Script (Defined BEFORE Tailwind loads) -->
+    <script>
+        function initTailwind() {
+            // Safety check to ensure tailwind is available
+            if (typeof tailwind === 'undefined') {
+                setTimeout(initTailwind, 50); // Retry briefly if not yet ready
+                return;
+            }
+
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            alpine: {
+                                900: '#1A3C34', // Deep Forest Green
+                                800: '#2C5248',
+                                100: '#E8F0EE',
+                                50: '#F2F6F5',
+                            },
+                            sand: {
+                                50: '#F9F7F2', // Background Beige
+                                100: '#F0EBE0',
+                                200: '#E0D6C0',
+                            },
+                            gold: {
+                                500: '#C19A6B', // Luxury Accent
+                                600: '#A07C50',
+                            },
+                        },
+                        fontFamily: {
+                            sans: ['Inter', 'sans-serif'],
+                            serif: ['Playfair Display', 'serif'],
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Tailwind CSS (Triggers initTailwind on load) -->
+    <script src="https://cdn.tailwindcss.com" onload="initTailwind()"></script>
+
+    <style>
+        body { background-color: #F9F7F2; color: #1A3C34; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(26, 60, 52, 0.05);
+            border: 1px solid rgba(224, 214, 192, 0.4);
+        }
+        .nav-active { border-bottom: 2px solid #C19A6B; color: #1A3C34; font-weight: 600; }
+        .nav-inactive { color: #6B7280; border-bottom: 2px solid transparent; }
+        .nav-inactive:hover { color: #1A3C34; }
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Scrollbar for tables */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #F9F7F2; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #C19A6B; border-radius: 2px; }
+        
+        /* Chat Bubbles */
+        .chat-bubble-me { background-color: #1A3C34; color: white; border-radius: 12px 12px 0 12px; }
+        .chat-bubble-other { background-color: #F2F6F5; color: #1A3C34; border-radius: 12px 12px 12px 0; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- TOP NAVIGATION -->
+    <header class="bg-white border-b border-sand-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <i class="ph-fill ph-mountains text-gold-600 text-3xl"></i>
+                        <span class="font-serif text-2xl font-bold text-gold-600 tracking-tight">hostelligence</span>
+                    </div>
+                    <nav class="hidden md:ml-12 md:flex space-x-6 h-full items-end pb-[1px] overflow-x-auto">
+                        <button onclick="switchTab('operations')" id="tab-operations" class="nav-active px-1 pb-4 text-sm font-medium transition-colors whitespace-nowrap">Operations</button>
+                        <button onclick="switchTab('inventory')" id="tab-inventory" class="nav-inactive px-1 pb-4 text-sm font-medium transition-colors whitespace-nowrap">Inventory</button>
+                        <button onclick="switchTab('forecast')" id="tab-forecast" class="nav-inactive px-1 pb-4 text-sm font-medium transition-colors whitespace-nowrap">Roster & Plan</button>
+                        <button onclick="switchTab('insights')" id="tab-insights" class="nav-inactive px-1 pb-4 text-sm font-medium transition-colors whitespace-nowrap">Insights</button>
+                        <button onclick="switchTab('team')" id="tab-team" class="nav-inactive px-1 pb-4 text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap"><i class="ph-bold ph-chats-circle"></i> Team & Chat</button>
+                        <button onclick="switchTab('compliance')" id="tab-compliance" class="nav-inactive px-1 pb-4 text-sm font-medium transition-colors flex items-center gap-1 whitespace-nowrap"><i class="ph-bold ph-shield-check"></i> HACCP</button>
+                    </nav>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <button class="p-2 rounded-full text-gray-400 hover:text-alpine-900 hover:bg-sand-100 relative">
+                        <i class="ph ph-bell text-xl"></i>
+                        <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                    </button>
+                    <div class="flex items-center gap-3 pl-4 border-l border-sand-200">
+                        <div class="text-right hidden sm:block">
+                            <p class="text-sm font-semibold text-alpine-900">Lukas Hofer</p>
+                            <p class="text-xs text-gray-500">F&B Manager</p>
+                        </div>
+                        <img class="h-10 w-10 rounded-full object-cover border-2 border-sand-200" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lukas&backgroundColor=c0aede" alt="User">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- DYNAMIC HEADER (JS updates this) -->
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <p id="header-subtitle" class="text-sm text-gray-500 font-medium uppercase tracking-wide">Operational Awareness</p>
+                    <h1 id="header-title" class="font-serif text-3xl font-bold text-alpine-900">Good Morning, Lukas.</h1>
+                </div>
+                <div class="hidden sm:block">
+                   <button class="bg-white border border-sand-200 text-alpine-900 px-4 py-2 rounded-lg shadow-sm text-sm font-medium hover:bg-sand-50 transition flex items-center gap-2">
+                        <i class="ph ph-export"></i> Export Report
+                   </button>
+                </div>
+            </div>
+
+            <!-- ================= TAB 1: OPERATIONS ================= -->
+            <div id="view-operations" class="fade-in block">
+                <!-- KPI STRIP -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="card p-4 border-l-4 border-l-alpine-900">
+                        <div class="flex justify-between items-start"><p class="text-xs font-bold text-gray-500 uppercase">Covers Today</p><span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">+12%</span></div>
+                        <div class="mt-2 flex items-baseline gap-2"><span class="text-3xl font-serif font-bold text-alpine-900">186</span><span class="text-sm text-gray-400">/ 160 Res.</span></div>
+                    </div>
+                    <div class="card p-4 border-l-4 border-l-alpine-900">
+                        <div class="flex justify-between items-start"><p class="text-xs font-bold text-gray-500 uppercase">Revenue (Live)</p><span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded-full">-1.4%</span></div>
+                        <div class="mt-2 flex items-baseline gap-2"><span class="text-3xl font-serif font-bold text-alpine-900">€6.8k</span><span class="text-sm text-gray-400">Target: €7k</span></div>
+                    </div>
+                    <div class="card p-4 border-l-4 border-l-alpine-900">
+                        <div class="flex justify-between items-start"><p class="text-xs font-bold text-gray-500 uppercase">Labor Cost</p><span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">Excellent</span></div>
+                        <div class="mt-2 flex items-baseline gap-2"><span class="text-3xl font-serif font-bold text-alpine-900">26.5%</span><span class="text-sm text-gray-400">Avg: 29%</span></div>
+                    </div>
+                    <div class="card p-4 border-l-4 border-l-red-500 bg-red-50/30">
+                        <div class="flex justify-between items-start"><p class="text-xs font-bold text-gray-500 uppercase">Critical Items</p><span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full animate-pulse">Action</span></div>
+                        <div class="mt-2 flex items-baseline gap-2"><span class="text-3xl font-serif font-bold text-alpine-900">2</span><span class="text-sm text-gray-400">Staff / Stock</span></div>
+                    </div>
+                </div>
+
+                <!-- SMART ASSISTANT -->
+                <div class="mb-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph-fill ph-sparkle text-gold-500 text-xl"></i>
+                        <h2 class="text-lg font-bold text-alpine-900">Smart Assistant Recommendations</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Card 1 -->
+                        <div class="card p-5 relative overflow-hidden hover:shadow-md transition-all">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                            <div class="flex justify-between mb-3"><span class="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-semibold">Inventory Risk</span><span class="text-xs text-gray-400">4h ago</span></div>
+                            <h3 class="font-bold text-alpine-900 mb-1">Fresh Trout (Forelle) expiring</h3>
+                            <div class="bg-sand-50 p-3 rounded-lg border border-sand-200 mb-4 mt-2">
+                                <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Smart Suggestion</p>
+                                <p class="text-sm font-medium text-alpine-900">Promote "Alpine Trout w/ Almonds" as Daily Special (€22.50).</p>
+                            </div>
+                            <div class="flex gap-2"><button onclick="triggerAction(this, 'Special Created', 'Printed')" class="flex-1 bg-alpine-900 text-white text-sm py-2 rounded hover:bg-alpine-800 transition">Approve & Print</button></div>
+                        </div>
+                         <!-- Card 2 -->
+                         <div class="card p-5 relative overflow-hidden hover:shadow-md transition-all">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+                            <div class="flex justify-between mb-3"><span class="text-yellow-600 bg-yellow-50 px-2 py-1 rounded text-xs font-semibold">Staffing Alert</span><span class="text-xs text-gray-400">Now</span></div>
+                            <h3 class="font-bold text-alpine-900 mb-1">Rain Forecast (19:00)</h3>
+                            <div class="bg-sand-50 p-3 rounded-lg border border-sand-200 mb-4 mt-2">
+                                <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Smart Suggestion</p>
+                                <p class="text-sm font-medium text-alpine-900">Terrace will close. Send 1 Runner (Felix) home early at 20:00.</p>
+                            </div>
+                            <div class="flex gap-2"><button onclick="triggerAction(this, 'Notify Staff', 'Notified')" class="flex-1 bg-white border border-alpine-900 text-alpine-900 text-sm py-2 rounded hover:bg-sand-50 transition">Notify Felix</button></div>
+                        </div>
+                         <!-- Card 3 -->
+                         <div class="card p-5 relative overflow-hidden hover:shadow-md transition-all">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                            <div class="flex justify-between mb-3"><span class="text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs font-semibold">Revenue Opp</span><span class="text-xs text-gray-400">Live</span></div>
+                            <h3 class="font-bold text-alpine-900 mb-1">Dessert Sales Low</h3>
+                            <div class="bg-sand-50 p-3 rounded-lg border border-sand-200 mb-4 mt-2">
+                                <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Smart Suggestion</p>
+                                <p class="text-sm font-medium text-alpine-900">Offer "Espresso on the house" with every Kaiserschmarrn.</p>
+                            </div>
+                            <div class="flex gap-2"><button onclick="triggerAction(this, 'Promo Active', 'Active')" class="flex-1 bg-white border border-alpine-900 text-alpine-900 text-sm py-2 rounded hover:bg-sand-50 transition">Activate Promo</button></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Workforce Panel -->
+                    <div class="card p-5 lg:col-span-2">
+                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-alpine-900 text-lg">Real-Time Demand</h3></div>
+                        <div class="h-64 w-full"><canvas id="workforceChart"></canvas></div>
+                    </div>
+                    
+                    <!-- INCOMING DELIVERIES -->
+                    <div class="card p-0 flex flex-col overflow-hidden">
+                        <div class="p-5 border-b border-sand-100 bg-sand-50 flex justify-between items-center">
+                            <h3 class="font-bold text-alpine-900 text-lg">Deliveries Today</h3>
+                            <span class="bg-white border border-sand-200 text-alpine-900 text-xs px-2 py-1 rounded-full font-medium shadow-sm">5 Items</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto h-[300px] custom-scrollbar">
+                            <div class="divide-y divide-sand-100">
+                                <!-- Completed Item -->
+                                <div class="flex items-center justify-between p-4 bg-white hover:bg-sand-50 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-green-50 flex items-center justify-center text-green-700"><i class="ph-fill ph-bread text-xl"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Bäckerei Therese Mölk</p>
+                                            <p class="text-xs text-gray-500">Bread & Pastries • 06:30 AM</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Received</span>
+                                </div>
+                                <!-- Completed Item -->
+                                <div class="flex items-center justify-between p-4 bg-white hover:bg-sand-50 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-green-50 flex items-center justify-center text-green-700"><i class="ph-fill ph-package text-xl"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Kröswang (Fresh)</p>
+                                            <p class="text-xs text-gray-500">Meat & Dairy • 08:15 AM</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Received</span>
+                                </div>
+                                 <!-- Pending Item -->
+                                <div class="flex items-center justify-between p-4 bg-white hover:bg-sand-50 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-blue-50 flex items-center justify-center text-blue-700"><i class="ph-fill ph-carrot text-xl"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Neurauter Gemüse</p>
+                                            <p class="text-xs text-gray-500">Seasonal Veg • 14:00 (Est)</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">Pending</span>
+                                </div>
+                                <!-- Pending Item -->
+                                <div class="flex items-center justify-between p-4 bg-white hover:bg-sand-50 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-sand-100 flex items-center justify-center text-alpine-900"><i class="ph-fill ph-wine text-xl"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Morandell</p>
+                                            <p class="text-xs text-gray-500">Spirits & Wines • 15:30</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">Pending</span>
+                                </div>
+                                 <!-- Problem Item -->
+                                 <div class="flex items-center justify-between p-4 bg-red-50/30 hover:bg-red-50 transition border-l-4 border-l-red-400">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-white flex items-center justify-center text-red-600"><i class="ph-fill ph-warning text-xl"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-red-900">Hagleitner Hygiene</p>
+                                            <p class="text-xs text-red-700">Cleaning Supplies • Issue</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">Delayed</span>
+                                </div>
+                                <!-- Canceled Item (New) -->
+                                <div class="flex items-center justify-between p-4 bg-white hover:bg-sand-50 transition opacity-75">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-500"><i class="ph-fill ph-coffee text-xl"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-gray-700 line-through">Schärf Coffee</p>
+                                            <p class="text-xs text-gray-500">Beans & Roast</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded">Canceled</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 2: INVENTORY ================= -->
+             <div id="view-inventory" class="hidden fade-in">
+                
+                <!-- NEW: FOOD WASTE & SUSTAINABILITY SECTION -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-[fadeIn_0.4s_ease-out]">
+                    <!-- Waste Stats -->
+                    <div class="card p-0 overflow-hidden border-none shadow-lg bg-gradient-to-br from-alpine-900 to-alpine-800 text-white relative">
+                        <div class="absolute top-0 right-0 p-4 opacity-10"><i class="ph-fill ph-recycle text-9xl"></i></div>
+                        <div class="p-6 relative z-10">
+                            <div class="flex items-center gap-2 mb-2 text-alpine-100">
+                                <i class="ph-fill ph-leaf text-green-400"></i>
+                                <span class="text-xs font-bold uppercase tracking-wider">Zero Waste Goal</span>
+                            </div>
+                            <h3 class="text-2xl font-serif font-bold mb-1">€ 485 Saved</h3>
+                            <p class="text-sm text-alpine-100 opacity-80 mb-6">Through smart usage this month.</p>
+                            
+                            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Waste Target</span>
+                                    <span>-12% vs Oct</span>
+                                </div>
+                                <div class="w-full bg-black/20 rounded-full h-1.5">
+                                    <div class="bg-green-400 h-1.5 rounded-full" style="width: 88%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smart Rescue Actions -->
+                    <div class="card p-6 lg:col-span-2 border-l-4 border-l-gold-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-alpine-900 text-lg flex items-center gap-2">
+                                    <i class="ph-fill ph-magic-wand text-gold-500"></i> Food Rescue Actions
+                                </h3>
+                                <p class="text-xs text-gray-500">AI suggestions based on items expiring within 48h.</p>
+                            </div>
+                            <button class="text-xs bg-sand-50 hover:bg-sand-100 text-alpine-900 px-3 py-1 rounded border border-sand-200 transition">View Log</button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Action 1 -->
+                            <div class="flex gap-3 p-3 rounded-lg bg-red-50 border border-red-100 items-start">
+                                <div class="bg-white p-2 rounded text-red-600 shadow-sm"><i class="ph-bold ph-fish"></i></div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between">
+                                        <p class="text-sm font-bold text-alpine-900">8x Fresh Trout</p>
+                                        <span class="text-[10px] font-bold bg-red-200 text-red-800 px-1.5 py-0.5 rounded">Exp: Today</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1 mb-2">High quantity risk. Cannot sell all a la carte.</p>
+                                    <div class="flex gap-2">
+                                        <button onclick="triggerAction(this, 'Menu Updated', 'Created')" class="flex-1 bg-white border border-red-200 text-red-700 text-xs font-bold py-1.5 rounded shadow-sm hover:bg-red-100">Create "Smoked Trout Mousse"</button>
+                                        <button class="px-2 text-gray-400 hover:text-gray-600"><i class="ph-bold ph-x"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Action 2 -->
+                            <div class="flex gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-100 items-start">
+                                <div class="bg-white p-2 rounded text-yellow-600 shadow-sm"><i class="ph-bold ph-brandy"></i></div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between">
+                                        <p class="text-sm font-bold text-alpine-900">2kg Ripe Berries</p>
+                                        <span class="text-[10px] font-bold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">Exp: Tomorrow</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1 mb-2">Too soft for garnish. Perfect for reduction.</p>
+                                    <div class="flex gap-2">
+                                        <button onclick="triggerAction(this, 'Kitchen Notified', 'Sent')" class="flex-1 bg-white border border-yellow-200 text-yellow-700 text-xs font-bold py-1.5 rounded shadow-sm hover:bg-yellow-100">Cook: Berry Compote</button>
+                                        <button class="px-2 text-gray-400 hover:text-gray-600"><i class="ph-bold ph-x"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Controls -->
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex gap-2" id="inv-buttons">
+                        <button onclick="filterInventory(this, 'all')" class="bg-alpine-900 text-white px-4 py-2 rounded shadow text-sm font-medium transition-colors">All Items</button>
+                        <button onclick="filterInventory(this, 'cold')" class="bg-white border border-sand-200 text-gray-600 px-4 py-2 rounded hover:bg-sand-50 text-sm font-medium transition-colors">Cold Storage</button>
+                        <button onclick="filterInventory(this, 'dry')" class="bg-white border border-sand-200 text-gray-600 px-4 py-2 rounded hover:bg-sand-50 text-sm font-medium transition-colors">Dry Storage</button>
+                        <button onclick="filterInventory(this, 'freezer')" class="bg-white border border-sand-200 text-gray-600 px-4 py-2 rounded hover:bg-sand-50 text-sm font-medium transition-colors">Freezer</button>
+                         <button onclick="filterInventory(this, 'bar')" class="bg-white border border-sand-200 text-gray-600 px-4 py-2 rounded hover:bg-sand-50 text-sm font-medium transition-colors">Bar</button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" placeholder="Search inventory..." class="pl-10 pr-4 py-2 border border-sand-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-alpine-900">
+                        <i class="ph-bold ph-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
+                    </div>
+                </div>
+
+                <!-- Inventory Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Walk-In Fridge -->
+                    <div id="inv-card-cold" class="card overflow-hidden inv-card">
+                        <div class="px-5 py-4 border-b border-sand-200 bg-sand-50 flex justify-between items-center">
+                            <div class="flex items-center gap-2"><i class="ph-fill ph-thermometer-cold text-blue-600"></i><h3 class="font-bold text-alpine-900">Walk-In Fridge</h3></div>
+                            <span class="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">3.2°C</span>
+                        </div>
+                        <div class="p-0">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-white text-gray-500 border-b border-sand-100">
+                                    <tr>
+                                        <th class="px-5 py-3 font-medium">Item</th>
+                                        <th class="px-5 py-3 font-medium">Expiry Date</th>
+                                        <th class="px-5 py-3 font-medium text-right">Qty</th>
+                                        <th class="px-5 py-3 font-medium text-center">Status</th>
+                                        <th class="px-5 py-3 font-medium text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-sand-100">
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Alpine Milk (Tyrol)</td>
+                                        <td class="px-5 py-3"><span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-medium">Nov 20</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">22 L</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">Expiring Soon</span></td>
+                                        <td class="px-5 py-3 text-right"><button onclick="triggerAction(this, 'Priority Tagged', 'Tagged')" class="bg-white border border-yellow-600 text-yellow-700 hover:bg-yellow-50 text-xs font-bold px-3 py-1.5 rounded transition">Use First</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Whipping Cream</td>
+                                        <td class="px-5 py-3"><span class="text-xs bg-green-50 text-green-800 px-2 py-1 rounded font-medium">Nov 24</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">4.5 L</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Beef Topside (Tafelspitz)</td>
+                                        <td class="px-5 py-3"><span class="text-xs bg-green-50 text-green-800 px-2 py-1 rounded font-medium">Nov 22</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">14.2 kg</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr class="bg-red-50/30">
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Trout (Fresh)</td>
+                                        <td class="px-5 py-3"><span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-bold flex items-center gap-1 w-fit"><i class="ph-bold ph-warning"></i> Today</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">8 Pcs</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-red-200 text-red-900 text-xs font-bold px-2 py-1 rounded animate-pulse">Critical</span></td>
+                                        <td class="px-5 py-3 text-right"><button onclick="triggerAction(this, 'Special Created', 'Created')" class="bg-red-600 text-white hover:bg-red-700 shadow-sm text-xs font-bold px-3 py-1.5 rounded transition">Create Special</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Grey Cheese (Graukäse)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Dec 12</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">2.5 kg</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Dry Storage -->
+                    <div id="inv-card-dry" class="card overflow-hidden inv-card">
+                        <div class="px-5 py-4 border-b border-sand-200 bg-sand-50 flex justify-between items-center">
+                            <div class="flex items-center gap-2"><i class="ph-fill ph-package text-amber-700"></i><h3 class="font-bold text-alpine-900">Dry Storage</h3></div>
+                             <span class="text-xs text-gray-400">Updated 2h ago</span>
+                        </div>
+                        <div class="p-0">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-white text-gray-500 border-b border-sand-100">
+                                    <tr>
+                                        <th class="px-5 py-3 font-medium">Item</th>
+                                        <th class="px-5 py-3 font-medium">Expiry Date</th>
+                                        <th class="px-5 py-3 font-medium text-right">Qty</th>
+                                        <th class="px-5 py-3 font-medium text-center">Status</th>
+                                        <th class="px-5 py-3 font-medium text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-sand-100">
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Wheat Flour (Type 480)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Jun 2026</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">50 kg</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Sugar (Crystal)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Aug 2026</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">12 kg</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Rice (Arborio)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Dec 2025</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">10 kg</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Napkins (White)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-400">-</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">2 Boxes</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded">Low Stock</span></td>
+                                        <td class="px-5 py-3 text-right"><button onclick="triggerAction(this, 'Order Placed with Supplier', 'Order Placed')" class="bg-alpine-900 text-white hover:bg-alpine-800 shadow-sm text-xs font-bold px-3 py-1.5 rounded transition">Reorder</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Freezer -->
+                    <div id="inv-card-freezer" class="card overflow-hidden inv-card">
+                        <div class="px-5 py-4 border-b border-sand-200 bg-sand-50 flex justify-between items-center">
+                            <div class="flex items-center gap-2"><i class="ph-fill ph-snowflake text-cyan-600"></i><h3 class="font-bold text-alpine-900">Freezer</h3></div>
+                            <span class="text-xs font-mono bg-cyan-100 text-cyan-800 px-2 py-1 rounded">-19°C</span>
+                        </div>
+                        <div class="p-0">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-white text-gray-500 border-b border-sand-100">
+                                    <tr>
+                                        <th class="px-5 py-3 font-medium">Item</th>
+                                        <th class="px-5 py-3 font-medium">Expiry Date</th>
+                                        <th class="px-5 py-3 font-medium text-right">Qty</th>
+                                        <th class="px-5 py-3 font-medium text-center">Status</th>
+                                        <th class="px-5 py-3 font-medium text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-sand-100">
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">French Fries</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Mar 2025</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">40 kg</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Ravioli (Schlutzkrapfen)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Feb 2025</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">120 Pcs</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Vanilla Ice Cream</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Jul 2025</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">4 L</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">Low Stock</span></td>
+                                        <td class="px-5 py-3 text-right"><button onclick="triggerAction(this, 'Order Added to List', 'Added to List')" class="bg-white border border-alpine-900 text-alpine-900 hover:bg-sand-50 text-xs font-bold px-3 py-1.5 rounded transition">Reorder</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                     <!-- Bar Stock -->
+                     <div id="inv-card-bar" class="card overflow-hidden inv-card">
+                        <div class="px-5 py-4 border-b border-sand-200 bg-sand-50 flex justify-between items-center">
+                            <div class="flex items-center gap-2"><i class="ph-fill ph-wine text-purple-800"></i><h3 class="font-bold text-alpine-900">Bar & Beverage</h3></div>
+                             <span class="text-xs text-gray-400">Inv: Anna</span>
+                        </div>
+                        <div class="p-0">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-white text-gray-500 border-b border-sand-100">
+                                    <tr>
+                                        <th class="px-5 py-3 font-medium">Item</th>
+                                        <th class="px-5 py-3 font-medium">Expiry Date</th>
+                                        <th class="px-5 py-3 font-medium text-right">Qty</th>
+                                        <th class="px-5 py-3 font-medium text-center">Status</th>
+                                        <th class="px-5 py-3 font-medium text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-sand-100">
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Beer (Gösser Keg 50L)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Mar 2025</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">3.5 Kegs</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Aperol</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-400">-</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">5 Btl.</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Healthy</span></td>
+                                        <td class="px-5 py-3 text-right"><button class="text-gray-400 hover:text-alpine-900 text-xs font-medium px-2">Inspect</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-5 py-3 font-medium text-alpine-900">Prosecco (House)</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-gray-500 font-mono">Dec 2025</span></td>
+                                        <td class="px-5 py-3 text-right text-gray-600">2 Btl.</td>
+                                        <td class="px-5 py-3 text-center"><span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">Critical Low</span></td>
+                                        <td class="px-5 py-3 text-right"><button onclick="triggerAction(this, 'Express Order Sent', 'Order Placed')" class="bg-alpine-900 text-white hover:bg-alpine-800 shadow-sm text-xs font-bold px-3 py-1.5 rounded transition">Reorder Now</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+             </div>
+
+            <!-- ================= TAB 3: FORECAST & ROSTER ================= -->
+            <div id="view-forecast" class="hidden fade-in">
+                <!-- Controls -->
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex gap-2">
+                        <button class="bg-white border border-sand-200 px-3 py-1 rounded hover:bg-sand-50 text-alpine-900"><i class="ph-bold ph-caret-left"></i></button>
+                        <span class="bg-white border border-sand-200 px-4 py-1 rounded font-medium text-alpine-900 text-sm flex items-center">Week 47 (Nov 18 - Nov 24)</span>
+                        <button class="bg-white border border-sand-200 px-3 py-1 rounded hover:bg-sand-50 text-alpine-900"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                    <button class="bg-alpine-900 text-white px-4 py-2 rounded shadow hover:bg-alpine-800 text-sm flex items-center gap-2">
+                        <i class="ph-fill ph-magic-wand"></i> Smart Optimization Apply
+                    </button>
+                </div>
+
+                <!-- Alert for Roster -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex gap-4 items-start">
+                    <i class="ph-fill ph-warning text-yellow-600 text-xl mt-0.5"></i>
+                    <div>
+                        <h4 class="font-bold text-yellow-800 text-sm">Conflict: Saturday Dinner Service</h4>
+                        <p class="text-yellow-700 text-sm mt-1">Reservations increased to 180. Kitchen capacity at 92%. <br><strong>Smart Recommendation: Call "Julia (Azubi)" for support shift (17:00 - 21:00).</strong></p>
+                    </div>
+                </div>
+
+                <!-- Smart Roster Table -->
+                <div class="card overflow-hidden mb-8">
+                    <div class="px-6 py-4 border-b border-sand-200 bg-sand-50 flex justify-between items-center">
+                        <h3 class="font-bold text-alpine-900">Staff Roster & Hours <span class="text-gray-400 font-normal ml-2 text-xs">Total: 24 Employees</span></h3>
+                        <div class="flex gap-2">
+                            <span class="text-xs bg-white border border-sand-200 px-2 py-1 rounded text-gray-600">Kitchen: 420h</span>
+                            <span class="text-xs bg-white border border-sand-200 px-2 py-1 rounded text-gray-600">Service: 510h</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-white border-b border-sand-200 text-gray-500">
+                            <tr><th class="px-6 py-3 w-48">Employee</th><th class="px-2 py-3 text-center">Role</th><th class="px-2 py-3 text-center">Mon</th><th class="px-2 py-3 text-center">Tue</th><th class="px-2 py-3 text-center">Wed</th><th class="px-2 py-3 text-center">Thu</th><th class="px-2 py-3 text-center">Fri</th><th class="px-2 py-3 text-center bg-sand-100 border-b-sand-200">Sat</th><th class="px-2 py-3 text-center">Sun</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-sand-100">
+                            <!-- KITCHEN TEAM -->
+                            <tr class="bg-sand-50/50"><td colspan="9" class="px-6 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Kitchen Team</td></tr>
+                            
+                            <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-alpine-800 text-white flex items-center justify-center text-xs">MH</div> Marco</td>
+                                <td class="text-center text-xs text-gray-500">Head Chef</td>
+                                <td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">12-22</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">12-22</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">12-22</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-23</span></td><td class="text-center bg-sand-50"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-23</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td>
+                            </tr>
+                            <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-alpine-800/80 text-white flex items-center justify-center text-xs">EK</div> Elena</td>
+                                <td class="text-center text-xs text-gray-500">Sous Chef</td>
+                                <td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-22</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-22</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-22</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-23</span></td><td class="text-center bg-sand-50"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-23</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">12-20</span></td>
+                            </tr>
+                            <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-alpine-800/60 text-white flex items-center justify-center text-xs">TG</div> Thomas</td>
+                                <td class="text-center text-xs text-gray-500">Breakfast Chef</td>
+                                <td class="text-center"><span class="bg-orange-600 text-white text-[10px] px-2 py-1 rounded">06-14</span></td><td class="text-center"><span class="bg-orange-600 text-white text-[10px] px-2 py-1 rounded">06-14</span></td><td class="text-center"><span class="bg-orange-600 text-white text-[10px] px-2 py-1 rounded">06-14</span></td><td class="text-center"><span class="bg-orange-600 text-white text-[10px] px-2 py-1 rounded">06-14</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center bg-sand-50"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-orange-600 text-white text-[10px] px-2 py-1 rounded">06-14</span></td>
+                            </tr>
+                             <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-alpine-800/70 text-white flex items-center justify-center text-xs">MR</div> Maria</td>
+                                <td class="text-center text-xs text-gray-500">Commis Chef</td>
+                                <td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">15-23</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">15-23</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">15-23</span></td><td class="text-center"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">15-23</span></td><td class="text-center bg-sand-50"><span class="bg-alpine-800 text-white text-[10px] px-2 py-1 rounded">14-23</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td>
+                            </tr>
+                             <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-xs">JW</div> Julia</td>
+                                <td class="text-center text-xs text-gray-500">Azubi (Appr.)</td>
+                                <td class="text-center"><span class="bg-teal-600 text-white text-[10px] px-2 py-1 rounded">School</span></td><td class="text-center"><span class="bg-teal-600 text-white text-[10px] px-2 py-1 rounded">School</span></td><td class="text-center"><span class="bg-alpine-800/60 text-white text-[10px] px-2 py-1 rounded">10-15</span></td><td class="text-center"><span class="bg-alpine-800/60 text-white text-[10px] px-2 py-1 rounded">10-15</span></td><td class="text-center"><span class="bg-alpine-800/60 text-white text-[10px] px-2 py-1 rounded">17-21</span></td><td class="text-center bg-sand-50"><span class="border border-dashed border-gray-400 text-gray-500 text-[10px] px-2 py-1 rounded">?</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td>
+                            </tr>
+                             <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-xs">KS</div> Kevin</td>
+                                <td class="text-center text-xs text-gray-500">Dishwasher</td>
+                                <td class="text-center"><span class="bg-gray-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center"><span class="bg-gray-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center"><span class="bg-gray-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-gray-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center bg-sand-50"><span class="bg-gray-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center"><span class="bg-gray-600 text-white text-[10px] px-2 py-1 rounded">12-20</span></td>
+                            </tr>
+
+                            <!-- SERVICE TEAM -->
+                            <tr class="bg-sand-50/50"><td colspan="9" class="px-6 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Service Team</td></tr>
+
+                            <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gold-600 text-white flex items-center justify-center text-xs">SM</div> Sarah</td>
+                                <td class="text-center text-xs text-gray-500">Rest. Mgr</td>
+                                <td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">10-18</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">10-18</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">16-23</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">16-00</span></td><td class="text-center bg-sand-50"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">16-23</span></td>
+                            </tr>
+                            <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gold-600/80 text-white flex items-center justify-center text-xs">AB</div> Anna</td>
+                                <td class="text-center text-xs text-gray-500">Bar Manager</td>
+                                <td class="text-center"><span class="bg-purple-900 text-white text-[10px] px-2 py-1 rounded">16-01</span></td><td class="text-center"><span class="bg-purple-900 text-white text-[10px] px-2 py-1 rounded">16-01</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-purple-900 text-white text-[10px] px-2 py-1 rounded">16-02</span></td><td class="text-center"><span class="bg-purple-900 text-white text-[10px] px-2 py-1 rounded">16-02</span></td><td class="text-center bg-sand-50"><span class="bg-purple-900 text-white text-[10px] px-2 py-1 rounded">16-02</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td>
+                            </tr>
+                            <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-purple-700 text-white flex items-center justify-center text-xs">LP</div> Luca</td>
+                                <td class="text-center text-xs text-gray-500">Sommelier</td>
+                                <td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-purple-700 text-white text-[10px] px-2 py-1 rounded">17-23</span></td><td class="text-center"><span class="bg-purple-700 text-white text-[10px] px-2 py-1 rounded">17-23</span></td><td class="text-center"><span class="bg-purple-700 text-white text-[10px] px-2 py-1 rounded">17-23</span></td><td class="text-center"><span class="bg-purple-700 text-white text-[10px] px-2 py-1 rounded">17-00</span></td><td class="text-center bg-sand-50"><span class="bg-purple-700 text-white text-[10px] px-2 py-1 rounded ring-2 ring-red-400">17-CL</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td>
+                            </tr>
+                             <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gold-600/70 text-white flex items-center justify-center text-xs">LW</div> Lisa</td>
+                                <td class="text-center text-xs text-gray-500">Chef de Rang</td>
+                                <td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">11-20</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">11-20</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">11-20</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center bg-sand-50"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">17-CL</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">11-20</span></td>
+                            </tr>
+                             <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gold-600/60 text-white flex items-center justify-center text-xs">MM</div> Max</td>
+                                <td class="text-center text-xs text-gray-500">Commis</td>
+                                <td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">17-23</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">17-23</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">17-23</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center bg-sand-50"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">11-20</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">11-20</span></td>
+                            </tr>
+                             <tr class="hover:bg-sand-50 transition">
+                                <td class="px-6 py-3 font-medium flex items-center gap-3 text-alpine-900"><div class="w-8 h-8 rounded-full bg-gold-600/40 text-white flex items-center justify-center text-xs">FH</div> Felix</td>
+                                <td class="text-center text-xs text-gray-500">Food Runner</td>
+                                <td class="text-center"><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-1 rounded">OFF</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">18-22</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">18-22</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">18-22</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">18-23</span></td><td class="text-center bg-sand-50"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">18-23</span></td><td class="text-center"><span class="bg-gold-600 text-white text-[10px] px-2 py-1 rounded">12-16</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 4: INSIGHTS & REPORTS (UPDATED) ================= -->
+            <div id="view-insights" class="hidden fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    
+                    <!-- BCG Matrix -->
+                    <div class="card p-6 lg:col-span-2">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-alpine-900 text-lg">Menu Intelligence Matrix</h3>
+                            <div class="flex gap-3 text-xs font-medium">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Star</span>
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-blue-400 rounded-full"></span> Cash Cow</span>
+                            </div>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="chartMenuMatrix"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Insight Actions -->
+                    <div class="space-y-6">
+                        <div class="card p-6 border-t-4 border-t-gold-500">
+                            <h3 class="font-bold text-alpine-900 mb-2">Top Recommendation</h3>
+                            <div class="flex items-center gap-3 mb-3 bg-sand-50 p-2 rounded">
+                                <div class="w-10 h-10 rounded bg-white border border-sand-200 flex items-center justify-center text-xl">🥩</div>
+                                <div>
+                                    <p class="font-bold text-sm text-alpine-900">Wiener Schnitzel</p>
+                                    <p class="text-xs text-green-600 font-medium">Star Item</p>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4">Material costs increased by 4% (Veal price). Suggest increasing price by <strong>€1.50</strong>.</p>
+                            <button class="w-full bg-alpine-900 text-white text-sm py-2 rounded hover:bg-alpine-800 transition">Simulate Price Change</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW INSIGHTS ROW -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Sales Mix (Pie Chart) -->
+                    <div class="card p-6">
+                         <h3 class="font-bold text-alpine-900 text-lg mb-4">Category Sales Mix</h3>
+                         <div class="h-48 relative">
+                             <canvas id="chartSalesMix"></canvas>
+                         </div>
+                         <div class="mt-4 flex justify-center gap-4 text-xs text-gray-600">
+                             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-alpine-900"></span> Food (62%)</span>
+                             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gold-500"></span> Beverage (35%)</span>
+                             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-300"></span> Merch (3%)</span>
+                         </div>
+                    </div>
+
+                    <!-- Sentiment Analysis -->
+                    <div class="card p-6">
+                        <h3 class="font-bold text-alpine-900 text-lg mb-4">Guest Sentiment</h3>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="text-4xl font-bold text-alpine-900">4.8</div>
+                            <div>
+                                <div class="flex text-gold-500 text-sm"><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star-half"></i></div>
+                                <p class="text-xs text-gray-500">Based on 42 reviews (Last 7 days)</p>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="bg-green-50 p-3 rounded border border-green-100">
+                                <div class="flex justify-between text-xs mb-1"><span class="font-bold text-green-800">Positive</span><span class="text-green-600">85%</span></div>
+                                <p class="text-xs text-gray-600 italic">"Great atmosphere and the Schnitzel was amazing!"</p>
+                            </div>
+                             <div class="bg-red-50 p-3 rounded border border-red-100">
+                                <div class="flex justify-between text-xs mb-1"><span class="font-bold text-red-800">Negative</span><span class="text-red-600">5%</span></div>
+                                <p class="text-xs text-gray-600 italic">"Wait time for drinks was a bit long on Saturday."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Movers -->
+                    <div class="card p-6">
+                        <h3 class="font-bold text-alpine-900 text-lg mb-4">Top Movers (Week)</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-green-500 font-bold text-sm">+14%</span>
+                                    <div><p class="text-sm font-bold text-alpine-900">Kaiserschmarrn</p><p class="text-xs text-gray-500">Dessert</p></div>
+                                </div>
+                                <span class="text-sm font-mono font-medium">214 Sold</span>
+                            </div>
+                            <div class="w-full h-px bg-sand-100"></div>
+                             <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-green-500 font-bold text-sm">+8%</span>
+                                    <div><p class="text-sm font-bold text-alpine-900">Grüner Veltliner</p><p class="text-xs text-gray-500">Wine (Glass)</p></div>
+                                </div>
+                                <span class="text-sm font-mono font-medium">180 Sold</span>
+                            </div>
+                             <div class="w-full h-px bg-sand-100"></div>
+                             <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-red-500 font-bold text-sm">-12%</span>
+                                    <div><p class="text-sm font-bold text-alpine-900">Pumpkin Soup</p><p class="text-xs text-gray-500">Starter</p></div>
+                                </div>
+                                <span class="text-sm font-mono font-medium">42 Sold</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 5: TEAM & CHAT (UPDATED) ================= -->
+            <div id="view-team" class="hidden fade-in h-[calc(100vh-12rem)]">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 h-full">
+                    
+                    <!-- Sidebar: Channel List & Users -->
+                    <div class="card p-4 flex flex-col h-full md:col-span-1">
+                        <div class="mb-6">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Channels</h3>
+                            <div class="space-y-1" id="channel-list">
+                                <button onclick="switchChannel('general', this)" class="channel-btn w-full text-left px-3 py-2 rounded bg-alpine-50 text-alpine-900 font-medium text-sm flex items-center gap-2 transition-colors"><i class="ph-bold ph-hash"></i> General</button>
+                                <button onclick="switchChannel('kitchen', this)" class="channel-btn w-full text-left px-3 py-2 rounded hover:bg-sand-50 text-gray-600 font-medium text-sm flex items-center gap-2 transition-colors"><i class="ph-bold ph-hash"></i> Kitchen-Updates</button>
+                                <button onclick="switchChannel('service', this)" class="channel-btn w-full text-left px-3 py-2 rounded hover:bg-sand-50 text-gray-600 font-medium text-sm flex items-center gap-2 transition-colors"><i class="ph-bold ph-hash"></i> Service-Team</button>
+                                <button onclick="switchChannel('announcements', this)" class="channel-btn w-full text-left px-3 py-2 rounded hover:bg-sand-50 text-gray-600 font-medium text-sm flex items-center gap-2 transition-colors"><i class="ph-bold ph-hash"></i> Announcements <span class="bg-red-500 text-white text-[10px] px-1.5 rounded-full ml-auto">1</span></button>
+                                <button onclick="switchChannel('ai-bot', this)" class="channel-btn w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center gap-2 transition-colors"><i class="ph-bold ph-robot"></i> Chef-Bot-AI</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-1 overflow-y-auto">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Team - Online (4)</h3>
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2 px-3 py-1">
+                                    <div class="relative"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Marco" class="w-8 h-8 rounded-full bg-sand-100"><span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span></div>
+                                    <div><p class="text-sm font-bold text-alpine-900">Marco</p><p class="text-[10px] text-gray-500">Head Chef</p></div>
+                                </div>
+                                <div class="flex items-center gap-2 px-3 py-1">
+                                    <div class="relative"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" class="w-8 h-8 rounded-full bg-sand-100"><span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span></div>
+                                    <div><p class="text-sm font-bold text-alpine-900">Sarah</p><p class="text-[10px] text-gray-500">Rest. Mgr</p></div>
+                                </div>
+                                 <div class="flex items-center gap-2 px-3 py-1">
+                                    <div class="relative"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lukas" class="w-8 h-8 rounded-full bg-sand-100"><span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span></div>
+                                    <div><p class="text-sm font-bold text-alpine-900">Lukas (You)</p><p class="text-[10px] text-gray-500">F&B Mgr</p></div>
+                                </div>
+                            </div>
+                            
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 mt-6">Offline</h3>
+                            <div class="space-y-2 opacity-60">
+                                 <div class="flex items-center gap-2 px-3 py-1">
+                                    <div class="relative"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Julia" class="w-8 h-8 rounded-full bg-sand-100 border border-gray-200"></div>
+                                    <p class="text-sm font-medium text-gray-600">Julia</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Area -->
+                    <div class="card flex flex-col h-full md:col-span-3 overflow-hidden relative">
+                        <!-- Chat Header -->
+                        <div class="px-6 py-4 border-b border-sand-200 flex justify-between items-center bg-white z-10">
+                            <div>
+                                <h3 id="chat-title" class="font-bold text-alpine-900 text-lg flex items-center gap-2"><i class="ph-bold ph-hash text-gray-400"></i> General</h3>
+                                <p id="chat-desc" class="text-xs text-gray-500">General discussion for all staff members</p>
+                            </div>
+                            <div class="flex -space-x-2">
+                                <img class="w-8 h-8 rounded-full border-2 border-white bg-sand-100" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Marco">
+                                <img class="w-8 h-8 rounded-full border-2 border-white bg-sand-100" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah">
+                                <img class="w-8 h-8 rounded-full border-2 border-white bg-sand-100" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anna">
+                                <div class="w-8 h-8 rounded-full border-2 border-white bg-sand-200 flex items-center justify-center text-xs font-bold text-gray-600">+5</div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages -->
+                        <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-sand-50" id="chat-container">
+                            <!-- Dynamic Content will be loaded here via JS -->
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="p-4 bg-white border-t border-sand-200">
+                            <div class="flex gap-2 items-end">
+                                <button class="p-2 text-gray-400 hover:bg-sand-50 rounded-full transition"><i class="ph-bold ph-paperclip text-xl"></i></button>
+                                <div class="flex-1 relative">
+                                    <input type="text" id="chat-input" placeholder="Type a message..." class="w-full bg-sand-50 border border-sand-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-alpine-900 pr-10" onkeypress="handleChatEnter(event)">
+                                    <i class="ph-bold ph-smiley absolute right-3 top-3 text-gray-400 cursor-pointer"></i>
+                                </div>
+                                <button onclick="sendMessage()" class="bg-alpine-900 text-white p-3 rounded-lg hover:bg-alpine-800 transition shadow-md"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 6: HACCP & COMPLIANCE ================= -->
+            <div id="view-compliance" class="hidden fade-in">
+                <!-- Top Status Bar -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Overall Score -->
+                    <div class="card p-5 flex items-center justify-between bg-alpine-900 text-white relative overflow-hidden">
+                        <div class="relative z-10">
+                            <p class="text-xs opacity-80 uppercase tracking-wider font-semibold">Hygiene Audit Score</p>
+                            <p class="text-4xl font-serif font-bold mt-1">98/100</p>
+                            <p class="text-xs text-alpine-100 mt-2 flex items-center gap-1"><i class="ph-bold ph-trend-up"></i> +2% vs Last Month</p>
+                        </div>
+                        <div class="h-20 w-20 rounded-full border-4 border-white/20 flex items-center justify-center text-5xl absolute -right-4 -bottom-4 opacity-20"><i class="ph-fill ph-shield-check"></i></div>
+                    </div>
+
+                    <!-- Training Alert (NEW) -->
+                    <div class="card p-5 border-l-4 border-l-orange-500 relative">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-xs text-gray-500 font-bold uppercase">Staff Training</p>
+                            <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">Action Req.</span>
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <span class="text-3xl font-bold text-alpine-900">3</span>
+                            <span class="text-sm text-gray-600 mb-1">Pending Certs</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Julia (Appr.), Kevin (Dish), Felix (Runner) need "HACCP Lvl 1".</p>
+                        <button class="mt-3 text-xs bg-alpine-900 text-white px-3 py-1.5 rounded hover:bg-alpine-800 transition w-full">Send Reminder</button>
+                    </div>
+
+                    <!-- Next Audit -->
+                    <div class="card p-5 flex flex-col justify-between">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Next Official Audit</p>
+                        <div class="flex items-center gap-4 mt-2">
+                            <div class="bg-sand-100 p-3 rounded-lg text-alpine-900"><i class="ph-fill ph-calendar-check text-2xl"></i></div>
+                            <div>
+                                <p class="font-bold text-alpine-900 text-lg">Dec 12, 2025</p>
+                                <p class="text-xs text-gray-500">Internal Quality Check</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Live Temperatures (Expanded) -->
+                    <div class="card p-0 lg:col-span-1 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-sand-200 bg-sand-50 flex justify-between items-center">
+                            <h3 class="font-bold text-alpine-900">Cooling Units (Live)</h3>
+                            <span class="text-xs font-bold text-red-600 flex items-center gap-1 bg-red-100 px-2 py-1 rounded-full animate-pulse"><i class="ph-bold ph-warning"></i> 2 Alerts</span>
+                        </div>
+                        <div class="divide-y divide-sand-100">
+                            <div class="p-4 flex justify-between items-center hover:bg-sand-50 transition">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-cow text-gray-400 text-lg"></i>
+                                    <div>
+                                        <span class="text-sm font-medium text-alpine-900">Walk-In Meat</span>
+                                        <span class="text-[10px] text-cyan-600 block font-medium flex items-center gap-1"><i class="ph-bold ph-check-circle"></i> Stable</span>
+                                    </div>
+                                </div>
+                                <span class="font-serif text-xl font-bold text-cyan-600">1.8°C</span>
+                            </div>
+                            
+                            <!-- WARNING: TOO WARM -->
+                            <div class="p-4 flex justify-between items-center bg-red-50 transition border-l-4 border-l-red-500">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-carrot text-red-500 text-lg"></i>
+                                    <div>
+                                        <span class="text-sm font-bold text-red-900">Walk-In Veg/Dairy</span>
+                                        <span class="text-[10px] text-red-700 block font-medium flex items-center gap-1"><i class="ph-bold ph-warning"></i> CRITICAL (High Temp)</span>
+                                    </div>
+                                </div>
+                                <span class="font-serif text-2xl font-bold text-red-600">8.4°C</span>
+                            </div>
+
+                            <div class="p-4 flex justify-between items-center hover:bg-sand-50 transition">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-snowflake text-cyan-600 text-lg"></i>
+                                    <div>
+                                        <span class="text-sm font-medium text-alpine-900">Main Freezer</span>
+                                        <span class="text-[10px] text-cyan-600 block font-medium flex items-center gap-1"><i class="ph-bold ph-check-circle"></i> Stable</span>
+                                    </div>
+                                </div>
+                                <span class="font-serif text-xl font-bold text-cyan-600">-19.2°C</span>
+                            </div>
+
+                            <!-- WARNING: RISING -->
+                            <div class="p-4 flex justify-between items-center bg-orange-50 transition border-l-4 border-l-orange-500">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-fish text-orange-500 text-lg"></i>
+                                    <div>
+                                        <span class="text-sm font-bold text-orange-900">Fish Drawer</span>
+                                        <span class="text-[10px] text-orange-700 block font-medium">⚠ Door open? Rising...</span>
+                                    </div>
+                                </div>
+                                <span class="font-serif text-2xl font-bold text-orange-600">5.1°C</span>
+                            </div>
+
+                            <div class="p-4 flex justify-between items-center hover:bg-sand-50 transition">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-wine text-purple-800 text-lg"></i>
+                                    <div>
+                                        <span class="text-sm font-medium text-alpine-900">Red Wine Cabinet</span>
+                                        <span class="text-[10px] text-cyan-600 block font-medium flex items-center gap-1"><i class="ph-bold ph-check-circle"></i> Stable</span>
+                                    </div>
+                                </div>
+                                <span class="font-serif text-xl font-bold text-cyan-600">16.0°C</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Digital Checklists & Swabs -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Daily Log -->
+                        <div class="card p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-alpine-900 text-lg">Daily Hygiene Protocols</h3>
+                                <span class="text-xs bg-sand-100 px-2 py-1 rounded text-gray-600">Nov 18</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="flex items-start gap-3 p-3 border border-green-200 bg-green-50/50 rounded-lg cursor-pointer">
+                                    <div class="mt-0.5"><i class="ph-fill ph-check-circle text-green-600 text-xl"></i></div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-alpine-900 line-through opacity-70">Morning Temp Check</p>
+                                        <p class="text-xs text-gray-500">Done: Marco (08:30)</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-sand-200 rounded-lg hover:bg-sand-50 cursor-pointer transition group">
+                                    <input type="checkbox" class="mt-1 w-4 h-4 text-alpine-900 rounded border-gray-300 focus:ring-alpine-900">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-alpine-900 group-hover:text-alpine-800">Mid-Day Cleaning</p>
+                                        <p class="text-xs text-gray-500">Surfaces & Floors</p>
+                                    </div>
+                                    <span class="text-orange-500 text-xs font-bold">Due</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-sand-200 rounded-lg hover:bg-sand-50 cursor-pointer transition group">
+                                    <input type="checkbox" class="mt-1 w-4 h-4 text-alpine-900 rounded border-gray-300 focus:ring-alpine-900">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-alpine-900">Dishwasher Rinse Temp</p>
+                                        <p class="text-xs text-gray-500">Must be > 82°C</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-sand-200 rounded-lg hover:bg-sand-50 cursor-pointer transition group">
+                                    <input type="checkbox" class="mt-1 w-4 h-4 text-alpine-900 rounded border-gray-300 focus:ring-alpine-900">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-alpine-900">Cutting Boards Sanitized</p>
+                                        <p class="text-xs text-gray-500">Color coded check</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-sand-200 rounded-lg hover:bg-sand-50 cursor-pointer transition group">
+                                    <input type="checkbox" class="mt-1 w-4 h-4 text-alpine-900 rounded border-gray-300 focus:ring-alpine-900">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-alpine-900">Probe Thermometer Calib.</p>
+                                        <p class="text-xs text-gray-500">Weekly Check</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-sand-200 rounded-lg hover:bg-sand-50 cursor-pointer transition group">
+                                    <input type="checkbox" class="mt-1 w-4 h-4 text-alpine-900 rounded border-gray-300 focus:ring-alpine-900">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-alpine-900">Oil Quality (TPM)</p>
+                                        <p class="text-xs text-gray-500">Fryer Check</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Swab Tests (Abklatsch) -->
+                        <div class="card p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-alpine-900 text-lg">Hygiene Monitoring (Surface Swabs)</h3>
+                                <button class="text-xs text-alpine-900 border border-sand-200 px-2 py-1 rounded hover:bg-sand-50">History</button>
+                            </div>
+                            <div class="space-y-3">
+                                <!-- Result 1 -->
+                                <div class="flex items-center justify-between p-3 border-b border-sand-100">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-green-100 p-2 rounded text-green-700"><i class="ph-bold ph-hand-soap"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Staff Hands (Random)</p>
+                                            <p class="text-xs text-gray-500">Sample: 3 Staff Members</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full">Pass (< 10 CFU)</span>
+                                </div>
+                                <!-- Result 2 -->
+                                <div class="flex items-center justify-between p-3 border-b border-sand-100">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-green-100 p-2 rounded text-green-700"><i class="ph-bold ph-door"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Door Handle (Walk-In)</p>
+                                            <p class="text-xs text-gray-500">Touchpoint Analysis</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full">Pass (Clean)</span>
+                                </div>
+                                <!-- Result 3 -->
+                                <div class="flex items-center justify-between p-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-yellow-100 p-2 rounded text-yellow-700"><i class="ph-bold ph-arrows-clockwise"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-alpine-900">Cleaning Cloths (Bar)</p>
+                                            <p class="text-xs text-gray-500">Protein Residue Test</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">Warning (Replace)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="h-12"></div> 
+        </div>
+    </main>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 pointer-events-none"></div>
+
+    <script>
+        // --- NAVIGATION LOGIC ---
+        function switchTab(tabId) {
+            const tabs = ['operations', 'inventory', 'forecast', 'insights', 'team', 'compliance'];
+            
+            // 1. Update Buttons
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('nav-active');
+                btn.classList.add('nav-inactive');
+            });
+            document.getElementById('tab-' + tabId).classList.add('nav-active');
+            document.getElementById('tab-' + tabId).classList.remove('nav-inactive');
+
+            // 2. Switch Views
+            tabs.forEach(id => {
+                const el = document.getElementById('view-' + id);
+                if (id === tabId) {
+                    el.classList.remove('hidden');
+                    el.classList.add('fade-in');
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('fade-in');
+                }
+            });
+
+            // 3. Header Titles
+            const headers = {
+                'operations': { sub: 'Operational Awareness', main: 'Good Morning, Lukas.' },
+                'inventory': { sub: 'Stock Management', main: 'Live Inventory' },
+                'forecast': { sub: 'Strategic Planning', main: 'Forecast & Roster' },
+                'insights': { sub: 'Deep Dive Analytics', main: 'Performance Reports' },
+                'team': { sub: 'Communication Hub', main: 'Team Chat' },
+                'compliance': { sub: 'Safety & Hygiene', main: 'HACCP Control Center' }
+            };
+            document.getElementById('header-subtitle').innerText = headers[tabId].sub;
+            document.getElementById('header-title').innerText = headers[tabId].main;
+        }
+
+        // --- INVENTORY FILTER ---
+        function filterInventory(btn, category) {
+            const buttons = document.getElementById('inv-buttons').querySelectorAll('button');
+            buttons.forEach(b => {
+                b.className = 'bg-white border border-sand-200 text-gray-600 px-4 py-2 rounded hover:bg-sand-50 text-sm font-medium transition-colors';
+            });
+            btn.className = 'bg-alpine-900 text-white px-4 py-2 rounded shadow text-sm font-medium transition-colors';
+
+            const cards = document.querySelectorAll('.inv-card');
+            cards.forEach(card => {
+                if (category === 'all') {
+                    card.classList.remove('hidden');
+                } else {
+                    card.id === 'inv-card-' + category ? card.classList.remove('hidden') : card.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- CHAT DATA & LOGIC ---
+        const chatData = {
+            'general': {
+                title: 'General',
+                desc: 'General discussion for all staff members',
+                messages: [
+                    { user: 'Marco', time: '10:30 AM', text: 'Morning team! Just a heads up, the Trout delivery arrived fresh this morning. Let\'s push the Daily Special.', me: false },
+                    { user: 'Sarah', time: '10:32 AM', text: 'Noted! I\'ll brief the service staff during the 5 PM meeting. 👍', me: false },
+                    { user: 'You', time: '11:15 AM', text: 'Great. Also, please check the inventory for napkins, system says we are low.', me: true }
+                ]
+            },
+            'kitchen': {
+                title: 'Kitchen-Updates',
+                desc: 'Back of House coordination & Prep',
+                messages: [
+                    { user: 'Elena', time: '09:15 AM', text: 'Soup prep is done for lunch service.', me: false },
+                    { user: 'Marco', time: '09:20 AM', text: 'Thanks Elena. Can you check the walk-in temp? Sensor showed a spike.', me: false },
+                    { user: 'You', time: '09:25 AM', text: 'I checked it, door was left open briefly. Back to 3.2°C now.', me: true }
+                ]
+            },
+            'service': {
+                title: 'Service-Team',
+                desc: 'Front of House, Reservations & Tables',
+                messages: [
+                    { user: 'Lisa', time: '16:00 PM', text: 'Table 4 is reserved for a birthday (8 pax) at 19:00.', me: false },
+                    { user: 'Sarah', time: '16:05 PM', text: 'Make sure we have the cake ready. I think it is in the walk-in.', me: false }
+                ]
+            },
+            'announcements': {
+                title: 'Announcements',
+                desc: 'Official updates from management',
+                messages: [
+                    { user: 'You', time: 'Yesterday', text: 'Please remember to sign the new hygiene protocol by Friday.', me: true },
+                    { user: 'System', time: '08:00 AM', text: '🚨 Alert: Health Inspection scheduled for Dec 12th.', me: false, system: true }
+                ]
+            },
+            'ai-bot': {
+                title: 'Chef-Bot-AI',
+                desc: 'Smart Recipe Assistant linked to Inventory Expiration Data',
+                messages: [
+                    { user: 'You', time: '10:05 AM', text: '@Bot Scan inventory. What items are expiring today?', me: true },
+                    { user: 'Chef Bot', time: '10:05 AM', text: 'Scanning... 🔍<br><strong>Found Critical Item:</strong> Fresh Trout (8 pcs) expires today.<br><strong>Secondary Risk:</strong> Almond Flakes (Dry Storage) - Open bag.', me: false },
+                    { user: 'You', time: '10:06 AM', text: 'Generate a Daily Special recipe to use these up.', me: true },
+                    { user: 'Chef Bot', time: '10:06 AM', text: '<strong>Suggestion:</strong> <em>"Alpine Trout Müllerin Art with Almond Butter"</em> 🐟<br><br><strong>Ingredients:</strong> Trout, Butter, Lemon, Almond Flakes, Parsley.<br><strong>Prep Time:</strong> 15 mins.<br><strong>Est. Food Cost:</strong> €5.40<br><strong>Recommended Price:</strong> €22.50 (76% Margin).<br><br><button class="mt-2 bg-alpine-900 text-white text-xs px-3 py-1 rounded" onclick="triggerAction(this, \'Recipe Added to POS\', \'Added to Menu\')">Add to POS Menu</button>', me: false }
+                ]
+            }
+        };
+
+        let currentChannel = 'general';
+
+        function switchChannel(channelId, btnElement) {
+            currentChannel = channelId;
+            
+            // 1. Update Buttons UI
+            const buttons = document.querySelectorAll('.channel-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-alpine-50', 'text-alpine-900');
+                btn.classList.add('hover:bg-sand-50', 'text-gray-600');
+            });
+            if(btnElement) {
+                btnElement.classList.remove('hover:bg-sand-50', 'text-gray-600');
+                btnElement.classList.add('bg-alpine-50', 'text-alpine-900');
+            }
+
+            // 2. Update Header
+            const data = chatData[channelId];
+            document.getElementById('chat-title').innerHTML = `<i class="ph-bold ph-hash text-gray-400"></i> ${data.title}`;
+            document.getElementById('chat-desc').innerText = data.desc;
+
+            // 3. Render Messages
+            renderMessages(data.messages);
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '<div class="text-center text-xs text-gray-400 my-4">Today</div>';
+            
+            messages.forEach(msg => {
+                let html = '';
+                if (msg.system) {
+                    html = `
+                        <div class="flex justify-center my-4">
+                            <div class="bg-red-50 border border-red-100 text-red-800 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2">
+                                <i class="ph-bold ph-warning"></i> ${msg.text}
+                            </div>
+                        </div>
+                    `;
+                } else if (msg.me) {
+                    html = `
+                        <div class="flex gap-3 flex-row-reverse animate-[fadeIn_0.2s_ease-out]">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lukas" class="w-10 h-10 rounded-full bg-white border border-sand-200 mt-1">
+                            <div class="text-right">
+                                <div class="flex items-baseline gap-2 mb-1 justify-end"><span class="text-xs text-gray-400">${msg.time}</span><span class="font-bold text-alpine-900 text-sm">You</span></div>
+                                <div class="chat-bubble-me p-3 shadow-sm text-sm text-left"><p>${msg.text}</p></div>
+                            </div>
+                        </div>`;
+                } else {
+                    html = `
+                        <div class="flex gap-3 animate-[fadeIn_0.2s_ease-out]">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.user}" class="w-10 h-10 rounded-full bg-white border border-sand-200 mt-1">
+                            <div>
+                                <div class="flex items-baseline gap-2 mb-1"><span class="font-bold text-alpine-900 text-sm">${msg.user}</span><span class="text-xs text-gray-400">${msg.time}</span></div>
+                                <div class="chat-bubble-other p-3 shadow-sm text-sm"><p>${msg.text}</p></div>
+                            </div>
+                        </div>`;
+                }
+                container.insertAdjacentHTML('beforeend', html);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleChatEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const container = document.getElementById('chat-container');
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const msgHTML = `
+                <div class="flex gap-3 flex-row-reverse animate-[fadeIn_0.2s_ease-out]">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lukas" class="w-10 h-10 rounded-full bg-white border border-sand-200 mt-1">
+                    <div class="text-right">
+                        <div class="flex items-baseline gap-2 mb-1 justify-end"><span class="text-xs text-gray-400">${timeString}</span><span class="font-bold text-alpine-900 text-sm">You</span></div>
+                        <div class="chat-bubble-me p-3 shadow-sm text-sm text-left">
+                            <p>${text}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', msgHTML);
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+            
+            // Update internal data so it persists if user switches back
+            if(chatData[currentChannel]) {
+                chatData[currentChannel].messages.push({ user: 'You', time: timeString, text: text, me: true });
+            }
+        }
+
+        // --- CHARTS & INIT ---
+        document.addEventListener('DOMContentLoaded', function() {
+            // Init Chat
+            renderMessages(chatData['general'].messages);
+            
+            // 1. Operations Chart
+            new Chart(document.getElementById('workforceChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['17h', '18h', '19h', '20h', '21h', '22h', '23h'],
+                    datasets: [
+                        { label: 'Staff', data: [5, 9, 12, 12, 10, 6, 4], backgroundColor: '#1A3C34', borderRadius: 4, order: 2 },
+                        { type: 'line', label: 'Forecast', data: [4, 8, 13, 14, 11, 7, 3], borderColor: '#C19A6B', borderWidth: 2, tension: 0.4, order: 1 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } }
+            });
+
+            // 2. Matrix Chart
+            new Chart(document.getElementById('chartMenuMatrix').getContext('2d'), {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Menu Items',
+                        data: [
+                            { x: 85, y: 92, name: 'Schnitzel (Star)' }, 
+                            { x: 20, y: 85, name: 'Burger (Puzzle)' }, 
+                            { x: 90, y: 35, name: 'Bolognese (Cash Cow)' }, 
+                            { x: 15, y: 15, name: 'Stew (Dog)' },
+                            { x: 65, y: 60, name: 'Kaiserschmarrn' }
+                        ],
+                        backgroundColor: (ctx) => {
+                            const v = ctx.raw;
+                            if(!v) return '#ccc';
+                            if(v.x > 50 && v.y > 50) return '#10B981'; 
+                            if(v.x > 50 && v.y <= 50) return '#60A5FA'; 
+                            if(v.x <= 50 && v.y > 50) return '#FBBF24'; 
+                            return '#EF4444'; 
+                        },
+                        pointRadius: 8, pointHoverRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { callbacks: { label: (ctx) => ctx.raw.name } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Profitability %', font: { weight: 'bold' } }, min: 0, max: 100, grid: { display: false } },
+                        y: { title: { display: true, text: 'Popularity %', font: { weight: 'bold' } }, min: 0, max: 100, grid: { display: false } }
+                    }
+                },
+                plugins: [{
+                    id: 'pointLabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+                        ctx.font = 'bold 10px Inter';
+                        ctx.fillStyle = '#1A3C34'; 
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+
+                        chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+                            const data = chart.data.datasets[0].data[index];
+                            const { x, y } = datapoint.tooltipPosition();
+                            ctx.fillText(data.name, x, y - 10);
+                        });
+                        ctx.restore();
+                    }
+                }]
+            });
+
+            // 3. Sales Mix Chart
+            new Chart(document.getElementById('chartSalesMix').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Food', 'Beverage', 'Merch'],
+                    datasets: [{
+                        data: [62, 35, 3],
+                        backgroundColor: ['#1A3C34', '#C19A6B', '#E5E7EB'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '70%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+
+        // --- UTILS ---
+        function triggerAction(btn, actionName, successLabel = 'Done ✓') {
+            // Visual feedback during processing
+            btn.innerText = '...';
+            btn.style.pointerEvents = 'none'; // Disable multiple clicks
+            
+            setTimeout(() => {
+                // Success State
+                btn.innerText = successLabel;
+                
+                // Reset classes to a "Success" state while keeping layout
+                // Use a safe class string that matches dimensions (green-600)
+                btn.className = "bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm cursor-default transition-all";
+                
+                // Remove onclick to prevent re-triggering
+                btn.removeAttribute('onclick');
+
+                // Optional: Visual feedback on the row (if it's a table row)
+                // We do NOT fade out the card anymore
+                const row = btn.closest('tr');
+                if (row) {
+                   row.classList.add('bg-green-50', 'transition-colors', 'duration-500'); 
+                }
+
+                // Show Toast
+                showToast(`Action Executed: ${actionName}`, "success");
+            }, 600);
+        }
+
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-alpine-900 text-white' : 'bg-gold-500 text-white';
+            toast.className = `${bgClass} shadow-lg rounded-lg px-4 py-3 mb-3 flex items-center gap-3 animate-[slideIn_0.3s_ease-out] pointer-events-auto`;
+            toast.innerHTML = `<i class="ph-fill ph-check-circle"></i> <span class="text-sm font-medium">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+    </script>
+</body>
+</html>
