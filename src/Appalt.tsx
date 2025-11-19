@@ -15,8 +15,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      {/* 🛑 HIER IST DIE KORREKTUR: basename hinzufügen */}
-      <BrowserRouter basename="/AI">
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/demo" element={<Demo />} />
@@ -29,4 +28,3 @@ const App = () => (
 );
 
 export default App;
-
