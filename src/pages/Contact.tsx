@@ -1,7 +1,7 @@
 import { Mail, Phone, MapPin, Euro, TrendingUp, Target } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
-const TARGET_FUNDING = 750000; // €750k
+const TARGET_FUNDING = 650000; // €650k
 const CURRENT_FUNDING = 0; // Aktueller Betrag (z.B. €100k)
 const progressPercent = Math.min(100, (CURRENT_FUNDING / TARGET_FUNDING) * 100);
 
@@ -76,7 +76,7 @@ const Contact = () => {
                   </div>
                   
                   <div className="text-center pt-4 border-t border-border">
-                    <p className="text-lg font-bold text-foreground">Equity Offered: 5% Shares for €100k</p>
+                    <p className="text-lg font-bold text-foreground">Equity Offered: 20% in total</p>
                   </div>
               </div>
             </div>
